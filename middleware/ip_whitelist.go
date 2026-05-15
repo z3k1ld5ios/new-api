@@ -49,7 +49,9 @@ func (c *IPWhitelistConfig) isAllowed(ipStr string) bool {
 	return false
 }
 
-// getClientIP extracts the real client IP from the request
+// getClientIP extracts the real client IP from the request.
+// NOTE: X-Forwarded-For can be spoofed by clients; only trust it if your
+// reverse proxy (nginx, etc.) is the one setting it.
 func getClientIP(c *gin.Context) string {
 	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
 		parts := strings.Split(xff, ",")
@@ -79,7 +81,8 @@ func IPWhitelist(cfg *IPWhitelistConfig) gin.HandlerFunc {
 		clientIP := getClientIP(c)
 		if !cfg.isAllowed(clientIP) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": "IP address not allowed",
+				"error":  "IP address not allowed",
+				"remote": clientIP,
 			})
 			return
 		}
